@@ -8,7 +8,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class ProgramController extends AbstractController
 {
-    #[Route('/program/', name: 'program_index')]
+    #[Route('/program', name: 'program_')]
     public function index(): Response
     {
         return $this->render('program/index.html.twig', [
