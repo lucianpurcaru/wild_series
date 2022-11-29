@@ -2,12 +2,15 @@
 // src/Controller/ProgramController.php
 namespace App\Controller;
 
+use App\Form\ProgramType;
 use App\Entity\Program;
 use App\Repository\ProgramRepository;
 use App\Repository\SeasonRepository;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
 
 #[Route('/program', name: 'program_')]
 class ProgramController extends AbstractController
@@ -21,6 +24,25 @@ class ProgramController extends AbstractController
             'programs' => $programs,
         ]);
     }
+
+    #[Route('/new', name: 'new')]
+    public function new(Request $request, ProgramRepository $programRepository): Response
+    {
+        $program = new Program();
+        $form = $this->createForm(ProgramType::class, $program);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted()) {
+            $programRepository->add($program, true);
+
+            return $this->redirectToRoute('program_index');
+        }
+
+        return $this->renderForm('program/new.html.twig', [
+            'formProgram' => $form,
+        ]);
+    }
+
 
     #[Route('/{id}', requirements: ['id' => '\d+'], methods: ['GET'], name: 'show')]
     public function show(int $id, ProgramRepository $programRepository): Response

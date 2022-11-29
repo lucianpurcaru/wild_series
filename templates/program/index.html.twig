@@ -4,8 +4,9 @@
 {% endblock %}
 
 {% block body %}
-	<h1>Toutes les séries de la table program :
+	<h1>Toutes les séries :
 	</h1>
+	<a href="{{ path('program_new') }}">Ajouter une série</a>
 	{% for program in programs %}
 		<div>
 			<h2>{{ loop.index }}
