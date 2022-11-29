@@ -12,7 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[Route('/program', name: 'program_')]
 class ProgramController extends AbstractController
 {
-    #[Route('/program', name: 'program_')]
+    #[Route('/', name: 'index')]
     public function index(ProgramRepository $programRepository): Response
     {
         $programs = $programRepository->findAll();
@@ -22,7 +22,7 @@ class ProgramController extends AbstractController
         ]);
     }
 
-    #[Route('program/{id}', requirements: ['id' => '\d+'], methods: ['GET'], name: 'show')]
+    #[Route('/{id}', requirements: ['id' => '\d+'], methods: ['GET'], name: 'show')]
     public function show(int $id, ProgramRepository $programRepository): Response
     {
         $program = $programRepository->findOneBy(['id' => $id]);
