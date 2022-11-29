@@ -4,7 +4,7 @@
 {% endblock %}
 
 {% block body %}
-	<h1>Toutes les catégories de la table category :
+	<h1>Toutes les catégories :
 	</h1>
 	{% for category in categories %}
 		<div>
@@ -16,8 +16,14 @@
 	{% else %}
 		Aucune catégorie trouvée.
 	{% endfor %}
-
+<div>
+		<a href="{{ path('category_new') }}">
+		Ajouter une catégorie
+	</a>
+</div>
+<div>
 	<a href="{{ path('App_index') }}">
 		Retour à l'accueil
 	</a>
+</div>	
 {% endblock %}
