@@ -9,7 +9,7 @@ use Doctrine\Persistence\ObjectManager;
 
 
 class ProgramFixtures extends Fixture implements DependentFixtureInterface
-{   
+{
     public const PROGRAMS = [
         ['id' => 0,
         'title' => 'Mercredi',
