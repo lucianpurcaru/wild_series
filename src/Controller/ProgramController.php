@@ -25,6 +25,7 @@ class ProgramController extends AbstractController
         ]);
     }
 
+
     #[Route('/new', name: 'new')]
     public function new(Request $request, ProgramRepository $programRepository): Response
     {
@@ -44,7 +45,8 @@ class ProgramController extends AbstractController
     }
 
 
-    #[Route('/{id}', requirements: ['id' => '\d+'], methods: ['GET'], name: 'show')]
+
+    #[Route('/program/{id}', requirements: ['id' => '\d+'], methods: ['GET'], name: 'show')]
     public function show(int $id, ProgramRepository $programRepository): Response
     {
         $program = $programRepository->findOneBy(['id' => $id]);

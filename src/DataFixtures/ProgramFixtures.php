@@ -10,47 +10,27 @@ use Doctrine\Persistence\ObjectManager;
 
 class ProgramFixtures extends Fixture implements DependentFixtureInterface
 {
-    public const PROGRAMS = [
-        ['id' => 0,
-        'title' => 'Mercredi',
-        'synopsis' => 'Une série sur Wednesday Addams',
-        'category' => 'category_Comédie'],
-        ['id' => 1,
-        'title' => 'The Crown',
-        'synopsis' => 'Une série sur la Reine Elisabeth',
-        'category' => 'category_Drame'],
-        ['id' => 2,
-        'title' => 'LOL: qui rit, sort!',
-        'synopsis' => 'Une série sur des comédiens qui n\'ont pas le droit de rire',
-        'category' => 'category_Comédie'],
-        ['id' => 3,
-        'title' => 'The Last Of Us',
-        'synopsis' => 'Une série inspirée du jeu vidéo',
-        'category' => 'category_Aventure'],
-        ['id' => 4,
-        'title' => 'The Crown',
-        'synopsis' => 'Une série sur la Reine Elisabeth',
-        'category' => 'category_Drame'],
-    ];
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
+        $j = 1;
+        foreach (CategoryFixtures::CATEGORIES as $category) {
+            for ($i = 1; $i <= 5; $i++) {
+                $program = new Program();
+                $program->setTitle('Titre n°' . $j);
+                $program->setPoster('Poster du titre n°' . $j);
+                $program->setSynopsis('Synopsis du titre n°' . $j);
+                $program->setCategory($this->getReference('category_' . $category));
+                $j++;
 
-        foreach(self::PROGRAMS as $programItems) {
-            $program = new Program();
-            $program->setTitle($programItems['title']);
-            $program->setSynopsis($programItems['synopsis']);
-            $program->setCategory($this->getReference($programItems['category']));
-            $manager->persist($program);
-            $this->addReference('program_' . $programItems['id'], $program);
-            
+                $manager->persist($program);
+                $manager->flush();
+            }
+        }
     }
-
-    $manager->flush();
-
-}
 
     public function getDependencies()
     {
+        // Tu retournes ici toutes les classes de fixtures dont ProgramFixtures dépend
         return [
             CategoryFixtures::class,
         ];
