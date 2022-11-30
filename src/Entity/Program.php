@@ -97,7 +97,7 @@ class Program
         return $this->seasons;
     }
 
-    public function addSeason(Season $season): self
+    public function saveSeason(Season $season): self
     {
         if (!$this->seasons->contains($season)) {
             $this->seasons[] = $season;
