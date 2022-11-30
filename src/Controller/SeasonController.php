@@ -22,15 +22,14 @@ class SeasonController extends AbstractController
     }
 
     #[Route('/new', name: 'app_season_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, SeasonRepository $seasonRepository): Response
     {
         $season = new Season();
         $form = $this->createForm(SeasonType::class, $season);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($season);
-            $entityManager->flush();
+            $seasonRepository->add($season, true);
 
             return $this->redirectToRoute('app_season_index', [], Response::HTTP_SEE_OTHER);
         }
@@ -50,13 +49,13 @@ class SeasonController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_season_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Season $season, EntityManagerInterface $entityManager): Response
+    public function edit(Request $request, Season $season, SeasonRepository $seasonRepository): Response
     {
         $form = $this->createForm(SeasonType::class, $season);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->flush();
+            $seasonRepository->add($season, true);
 
             return $this->redirectToRoute('app_season_index', [], Response::HTTP_SEE_OTHER);
         }
@@ -68,11 +67,10 @@ class SeasonController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_season_delete', methods: ['POST'])]
-    public function delete(Request $request, Season $season, EntityManagerInterface $entityManager): Response
+    public function delete(Request $request, Season $season, SeasonRepository $seasonRepository): Response
     {
         if ($this->isCsrfTokenValid('delete'.$season->getId(), $request->request->get('_token'))) {
-            $entityManager->remove($season);
-            $entityManager->flush();
+            $seasonRepository->remove($season, true);
         }
 
         return $this->redirectToRoute('app_season_index', [], Response::HTTP_SEE_OTHER);

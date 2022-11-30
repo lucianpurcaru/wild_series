@@ -4,26 +4,22 @@
 {% endblock %}
 
 {% block body %}
-	<h1>Toutes les catégories :
+	<h1>Toutes les catégories:
 	</h1>
 	{% for category in categories %}
 		<div>
 			<h2>{{ loop.index }}
 				/
 				{{ category.name}}
-			<a href="{{ path("category_show", { categoryName: category.name }) }}">Voir les séries dans cette catégorie</a>
+			<a href="{{ path("category_show", { name: category.name }) }}">Voir les séries dans cette catégorie</a>
 		</div>
 	{% else %}
 		Aucune catégorie trouvée.
 	{% endfor %}
-<div>
-		<a href="{{ path('category_new') }}">
-		Ajouter une catégorie
+	<a href="{{ path('category_new') }}">
+		Ajouter un categorie
 	</a>
-</div>
-<div>
-	<a href="{{ path('App_index') }}">
+	<a href="{{ path('app_index') }}">
 		Retour à l'accueil
 	</a>
-</div>	
 {% endblock %}

@@ -22,15 +22,14 @@ class EpisodeController extends AbstractController
     }
 
     #[Route('/new', name: 'app_episode_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, EpisodeRepository $episodeRepository): Response
     {
         $episode = new Episode();
         $form = $this->createForm(EpisodeType::class, $episode);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($episode);
-            $entityManager->flush();
+            $episodeRepository->add($episode, true);
 
             return $this->redirectToRoute('app_episode_index', [], Response::HTTP_SEE_OTHER);
         }
@@ -50,13 +49,13 @@ class EpisodeController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_episode_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Episode $episode, EntityManagerInterface $entityManager): Response
+    public function edit(Request $request, Episode $episode, EpisodeRepository $episodeRepository): Response
     {
         $form = $this->createForm(EpisodeType::class, $episode);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->flush();
+            $episodeRepository->add($episode, true);
 
             return $this->redirectToRoute('app_episode_index', [], Response::HTTP_SEE_OTHER);
         }
@@ -68,11 +67,10 @@ class EpisodeController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_episode_delete', methods: ['POST'])]
-    public function delete(Request $request, Episode $episode, EntityManagerInterface $entityManager): Response
+    public function delete(Request $request, Episode $episode, EpisodeRepository $episodeRepository): Response
     {
         if ($this->isCsrfTokenValid('delete'.$episode->getId(), $request->request->get('_token'))) {
-            $entityManager->remove($episode);
-            $entityManager->flush();
+            $episodeRepository->remove($episode, true);
         }
 
         return $this->redirectToRoute('app_episode_index', [], Response::HTTP_SEE_OTHER);
