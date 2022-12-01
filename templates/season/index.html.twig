@@ -3,22 +3,20 @@
 {% block title %}Season index{% endblock %}
 
 {% block body %}
-    <h1>Season index</h1>
+    <h1>Liste des saisons</h1>
 
     <table class="table">
         <thead>
             <tr>
-                <th>Id</th>
-                <th>Number</th>
-                <th>Year</th>
+                <th>N°</th>
+                <th>Année</th>
                 <th>Description</th>
-                <th>actions</th>
+
             </tr>
         </thead>
         <tbody>
         {% for season in seasons %}
             <tr>
-                <td>{{ season.id }}</td>
                 <td>{{ season.number }}</td>
                 <td>{{ season.year }}</td>
                 <td>{{ season.description }}</td>
