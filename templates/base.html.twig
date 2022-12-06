@@ -19,23 +19,18 @@
 		{% endblock %}
 	</head>
 	<body>
-		<header>{% include './components/_navbar.html.twig' %}</header>
+		<header>
+			{% include '_navbar.html.twig' %}
+		</header>
+		<div>
+			{% for category, messages in app.flashes %}
+				{% for message in messages %}
+					<div class="alert alert-{{ category }}">
+						{{ message }}
+					</div>
+				{% endfor %}
+			{% endfor %}
+		</div>
 		{% block body %}{% endblock %}
 	</body>
-	{% block javascripts %}
-		{{ encore_entry_script_tags('app') }}
-	{% endblock %}
-</html></head><body>
-<header>
-	{% include './components/_navbar.html.twig' %}
-</header>
-<div>
-	{% for category, messages in app.flashes %}
-		{% for message in messages %}
-			<div class="alert alert-{{ category }}">
-				{{ message }}
-			</div>
-		{% endfor %}
-	{% endfor %}
-</div>
-{% block body %}{% endblock %}</body></html>
+</html>

@@ -20,12 +20,12 @@ class Program
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255, unique: true)]
-    #[Assert\NotBlank(message: 'Ce champ ne doit pas être vide.')]
-    #[Assert\Length(max: 255, maxMessage: 'Le titre {{ value }} est trop long,{{ limit }} caractères max.',)]
+    #[Assert\NotBlank(message: 'Le titre ne peut pas être vide.')]
+    #[Assert\Length(max: 255, maxMessage: 'Le titre saisi {{ value }} est trop long, il ne devrait pas dépasser {{ limit }} caractères.',)]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT)]
-    #[Assert\NotBlank(message: 'Ce champ ne doit pas être vide..')]
+    #[Assert\NotBlank(message: 'Le titre ne peut pas être vide.')]
     #[Assert\Regex(
         pattern: '/^plus belle la vie$/i',
         match: false,
@@ -35,7 +35,7 @@ class Program
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Url()]
-    #[Assert\Length(max: 255, maxMessage: 'L\'url saisie {{ value }} est trop longue, {{ limit }} caractères max.',)]
+    #[Assert\Length(max: 255, maxMessage: 'L\'URL du poster saisie {{ value }} est trop longue, elle ne devrait pas dépasser {{ limit }} caractères.',)]
     private ?string $poster = null;
 
     #[ORM\ManyToOne(inversedBy: 'programs')]
@@ -47,16 +47,20 @@ class Program
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: 'Le titre ne peut pas être vide.')]
-    #[Assert\Length(max: 255, maxMessage: 'Le titre saisi {{ value }} est trop long, {{ limit }} max.',)]
+    #[Assert\Length(max: 255, maxMessage: 'Le titre saisi {{ value }} est trop long, il ne devrait pas dépasser {{ limit }} caractères.',)]
     private ?string $country = null;
 
     #[ORM\Column]
-    #[Assert\NotBlank(message: 'Ce champ ne doit pas être vide..')]
+    #[Assert\NotBlank(message: 'L\'année ne doit pas être vide.')]
     private ?int $year = null;
+
+    #[ORM\ManyToMany(targetEntity: Actor::class, mappedBy: 'programs')]
+    private Collection $actors;
 
     public function __construct()
     {
         $this->seasons = new ArrayCollection();
+        $this->actors = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -162,6 +166,33 @@ class Program
     public function setYear(int $year): self
     {
         $this->year = $year;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Actor>
+     */
+    public function getActors(): Collection
+    {
+        return $this->actors;
+    }
+
+    public function addActor(Actor $actor): self
+    {
+        if (!$this->actors->contains($actor)) {
+            $this->actors->add($actor);
+            $actor->addProgram($this);
+        }
+
+        return $this;
+    }
+
+    public function removeActor(Actor $actor): self
+    {
+        if ($this->actors->removeElement($actor)) {
+            $actor->removeProgram($this);
+        }
 
         return $this;
     }

@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	Wild Series
+{% endblock %}
+
+{% block body %}
+	<h1>
+		Tous les acteurs de nos séries :
+	</h1>
+	{% for actor in actors %}
+		<div>
+			<h2>
+				{{ loop.index }}
+				/
+				{{ actor.name }}
+			</h2>
+			<a href="{{ path( 'actor_show', { id: actor.id } ) }}">
+				Voir la fiche
+			</a>
+			{# <a href="{{
+			        path(
+			          'actor_edit',
+			          {
+			            id: program.id
+			          }
+			        )
+			        }}">
+			        Editer
+			      </a> #}
+		</div>
+	{% else %}
+		Aucun acteur trouvé.
+	{% endfor %}
+
+	<a href="{{ path('app_index') }}">Retour à l'accueil</a>
+{% endblock %}

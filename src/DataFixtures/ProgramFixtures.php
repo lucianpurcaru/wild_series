@@ -11,7 +11,10 @@ use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 
 class ProgramFixtures extends Fixture implements DependentFixtureInterface
 {
+    const NB_PROGRAMS = 5;
+
     public function load(ObjectManager $manager): void
+
     {
         $faker = Factory::create();
         $j = 1;

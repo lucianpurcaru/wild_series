@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+{% block title %}
+	Acteur #{{ actor.id }}
+{% endblock %}
+
+{% block body %}
+	<div class="media">
+		<div class="program d-flex flex-column w-90 m-auto">
+			<div class="media-body">
+				<h1 class="fs-2 text-center mb-3 mt-0">
+					{{ actor.name }}
+				</h1>
+			</div>
+		</div>
+		{% for program in actor.programs %}
+			<div>
+				<h2>
+					Série #{{ program.id }}
+					: ({{ program.title }})
+				</h2>
+				<p>
+					{{ program.synopsis }}
+				</p>
+				<a href="{{ path( 'program_show', { id: program.id } ) }}">
+					Voir le détail
+				</a>
+			</div>
+		{% else %}
+			<p>
+				Aucune série trouvée.
+			</p>
+		{% endfor %}
+	</div>
+
+	<a href="{{ path('actor_index') }}">Retour à la liste des acteurs</a>
+{% endblock %}
