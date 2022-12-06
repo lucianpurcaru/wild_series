@@ -2,15 +2,18 @@
 // src/Controller/ProgramController.php
 namespace App\Controller;
 
-use App\Form\ProgramType;
-use App\Entity\Program;
-use App\Repository\ProgramRepository;
-use App\Repository\SeasonRepository;
+use App\Repository\EpisodeRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use App\Repository\ProgramRepository;
+use App\Entity\Program;
+use App\Repository\SeasonRepository;
+use App\Entity\Season;
+use App\Entity\Episode;
+use App\Form\ProgramType;
+use Symfony\Component\HttpFoundation\Request;
 
 #[Route('/program', name: 'program_')]
 class ProgramController extends AbstractController
@@ -19,14 +22,13 @@ class ProgramController extends AbstractController
     public function index(ProgramRepository $programRepository): Response
     {
         $programs = $programRepository->findAll();
-
-        return $this->render('program/index.html.twig', [
-            'programs' => $programs,
-        ]);
+        return $this->render(
+            'program/index.html.twig',
+            ['programs' => $programs]
+        );
     }
 
-
-    #[Route('/new', name: 'new')]
+    #[Route('/new', name: 'new', methods: ['GET', 'POST'])]
     public function new(Request $request, ProgramRepository $programRepository): Response
     {
         $program = new Program();
@@ -34,50 +36,133 @@ class ProgramController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $programRepository->add($program, true);
+            $programRepository->save($program, true);
+
+            // Once the form is submitted, valid and the data inserted in database, you can define the success flash message
+            $this->addFlash('success', 'La série a été ajoutée.');
 
             return $this->redirectToRoute('program_index');
         }
 
         return $this->renderForm('program/new.html.twig', [
-            'formProgram' => $form,
+            'form' => $form,
         ]);
     }
 
-
-
-    #[Route('/program/{id}', requirements: ['id' => '\d+'], methods: ['GET'], name: 'show')]
-    public function show(int $id, ProgramRepository $programRepository): Response
+    #[Route('/{id}', methods: ['GET'],  requirements: ['id' => '\d+'], name: 'show')]
+    public function show(Program $program, SeasonRepository $seasonRepository): Response
     {
-        $program = $programRepository->findOneBy(['id' => $id]);
-        $seasons = $program->getSeasons();
-
         if (!$program) {
-            throw $this->createNotFoundException (
-                'No program with id : ' . $id . ' found in program\'s table. '
+            throw $this->createNotFoundException(
+                'Pas de saison trouvée.'
             );
         }
+
+        $seasons = $seasonRepository->findBy(['program' => $program], ['id' => 'DESC']);
+
         return $this->render('program/show.html.twig', [
             'program' => $program,
             'seasons' => $seasons,
         ]);
     }
 
-    #[Route('/{programId}/seasons/{seasonId}', methods: ['GET'], requirements: [
-        'programId'=>'\d+',
-        'seasonId'=>'\d+',
-    ], name: 'season_show')]
-
-    public function showSeason(int $programId, int $seasonId,
-    ProgramRepository $programRepository, SeasonRepository $seasonRepository)
+    #[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+    public function edit(Request $request, Program $program, ProgramRepository $programRepository): Response
     {
-        $program = $programRepository->findOneBy(['id' => $programId]);
-        $season = $seasonRepository->find($seasonId);
-        $episodes = $season->getEpisodes();
+
+        $form = $this->createForm(ProgramType::class, $program);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $programRepository->save($program, true);
+
+            $this->addFlash('success', 'La série a été modifiée.');
+
+            return $this->redirectToRoute('program_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->renderForm('program/edit.html.twig', [
+            'program' => $program,
+            'form' => $form,
+        ]);
+    }
+
+    #[Route('/{id}', name: 'delete', methods: ['POST'])]
+    public function delete(Request $request, Program $program, ProgramRepository $programRepository): Response
+    {
+        if ($this->isCsrfTokenValid('delete' . $program->getId(), $request->request->get('_token'))) {
+            $programRepository->remove($program, true);
+
+            $this->addFlash('danger', 'La série a été supprimée.');
+        }
+
+        return $this->redirectToRoute('program_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route(
+        '/{programId}/season/{seasonId}',
+        methods: ['GET'],
+        requirements: ['programId' => '\d+', 'seasonId' => '\d+'],
+        name: 'season_show'
+    )]
+    #[ParamConverter('program', options: ['mapping' => ['programId' => 'id']])]
+    #[ParamConverter('season', options: ['mapping' => ['seasonId' => 'id']])]
+    public function showSeason(Program $program, Season $season, EpisodeRepository $episodeRepository): Response
+    {
+        if (!$program) {
+            throw $this->createNotFoundException(
+                'Pas de série trouvée.'
+            );
+        }
+
+        if (!$season) {
+            throw $this->createNotFoundException(
+                'Pas de saison trouvée dans la série.'
+            );
+        }
+
+        $episodes = $episodeRepository->findBy(['season' => $season]);
+
         return $this->render('program/season_show.html.twig', [
             'program' => $program,
             'season' => $season,
             'episodes' => $episodes,
+        ]);
+    }
+
+    #[Route(
+        '/{programId}/season/{seasonId}/episode/{episodeId}',
+        methods: ['GET'],
+        requirements: ['programId' => '\d+', 'seasonId' => '\d+'],
+        name: 'episode_show'
+    )]
+    #[ParamConverter('program', options: ['mapping' => ['programId' => 'id']])]
+    #[ParamConverter('season', options: ['mapping' => ['seasonId' => 'id']])]
+    #[ParamConverter('episode', options: ['mapping' => ['episodeId' => 'id']])]
+    public function showEpisode(Program $program, Season $season, Episode $episode): Response
+    {
+        if (!$program) {
+            throw $this->createNotFoundException(
+                'Pas de saison trouvée.'
+            );
+        }
+
+        if (!$season) {
+            throw $this->createNotFoundException(
+                'Pas de saison trouvée.'
+            );
+        }
+
+        if (!$episode) {
+            throw $this->createNotFoundException(
+                'Pas d\'épisode trouvé dans la saison.'
+            );
+        }
+
+        return $this->render('program/episode_show.html.twig', [
+            'program' => $program,
+            'season' => $season,
+            'episode' => $episode,
         ]);
     }
 }
