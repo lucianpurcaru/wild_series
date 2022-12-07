@@ -8,10 +8,18 @@ use App\Entity\Program;
 use Doctrine\Persistence\ObjectManager;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
+use Symfony\Component\String\Slugger\SluggerInterface;
 
 class ProgramFixtures extends Fixture implements DependentFixtureInterface
 {
     const NB_PROGRAMS = 5;
+
+    private SluggerInterface $slugger;
+
+    public function __construct(SluggerInterface $slugger)
+    {
+        $this->slugger = $slugger;
+    }
 
     public function load(ObjectManager $manager): void
 
@@ -19,7 +27,7 @@ class ProgramFixtures extends Fixture implements DependentFixtureInterface
         $faker = Factory::create();
         $j = 1;
         foreach (CategoryFixtures::CATEGORIES as $categoryName) {
-            
+
             for ($i = 1; $i <= 10; $i++) {
                 $program = new Program();
                 $program->setTitle($faker->sentence(3, true));
@@ -27,12 +35,12 @@ class ProgramFixtures extends Fixture implements DependentFixtureInterface
                 $program->setSynopsis($faker->sentence(20, true));
                 $program->setCategory($this->getReference('category_' . $categoryName));
                 $this->addReference('program_' . $j, $program);
-                
+                $program->setSlug($this->slugger->slug($program->getTitle()));
                 $manager->persist($program);
                 $j++;
+                $manager->flush();
             }
         }
-        $manager->flush();
     }
 
     public function getDependencies()

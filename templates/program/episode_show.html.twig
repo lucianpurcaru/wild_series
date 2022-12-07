@@ -1,14 +1,50 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Wild Series
+{% block title %}
+	Série #{{ program.id }}
 {% endblock %}
 
 {% block body %}
-	<main>
-		<h1>{{ program.title }} S{{ season.number }} E{{ episode.number }} </h1>
-				<h2 class="h5 my-2">{{ episode.title }}</h2>
-				<p>Synopsis :
-					{{ episode.synopsis }}</p>
-			href="{{ path('program_season_show', {'programId': program.id, 'seasonId': season.id}) }}">Retour à la liste des épisodes</a>
-	</main>
+	<div class="media d-flex flex-column">
+		<div class="program d-flex flex-column w-90 m-auto">
+			<img class="align-self-center mr-3 mb-4" src="{{ program.poster }}" alt="{{ program.title }} poster"/>
+			<div class="media-body">
+				<h1 class="fs-2 text-center mb-3 mt-0">
+					{{ program.title }}
+				</h1>
+				<p class="mb-3">
+					{{ program.synopsis }}
+				</p>
+				<p class="mb-3">
+					Catégorie :
+					{{ program.category.name }}
+				</p>
+			</div>
+			<div class="season d-flex flex-column mt-5">
+				<h2 class="mb-3">
+					Saison
+					{{ season.number }}
+					({{ season.year }})
+				</h2>
+				<p class="mb-3">
+					{{ season.description }}
+				</p>
+			</div>
+			<div class="season d-flex flex-column mt-5">
+				<h2 class="mb-3">
+					Episode
+					{{ episode.number }}
+					- ({{ episode.title }})
+				</h2>
+				<p class="mb-3">
+					{{ episode.synopsis }}
+				</p>
+			</div>
+		</div>
+		<div class="mt-5 pb-3 mx-auto w-90">
+			<a href="{{ path( 'program_season_show', { programSlug: program.slug, seasonId: season.id } ) }}">
+				Retour à la saison.
+			</a>
+		</div>
+	</div>
 {% endblock %}

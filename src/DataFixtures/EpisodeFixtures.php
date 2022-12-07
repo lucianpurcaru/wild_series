@@ -8,9 +8,17 @@ use App\Entity\Episode;
 use Doctrine\Persistence\ObjectManager;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
+use Symfony\Component\String\Slugger\SluggerInterface;
 
 class EpisodeFixtures extends Fixture implements  DependentFixtureInterface
 {
+    private SluggerInterface $slugger;
+
+    public function __construct(SluggerInterface $slugger)
+    {
+        $this->slugger = $slugger;
+    }
+    
     public function load(ObjectManager $manager): void
     {
         //Puis ici nous demandons à la Factory de nous fournir un Faker
@@ -28,7 +36,8 @@ class EpisodeFixtures extends Fixture implements  DependentFixtureInterface
             $episode->setSynopsis($faker->sentence(20, true));
             $episode->setNumber($i);
             $episode->setSeason($this->getReference('season_' . $faker->numberBetween(1, 10)));
-            
+            $episode->setDuration($faker->numberBetween(10, 20));
+            $episode->setSlug($this->slugger->slug($episode->getTitle()));
             $manager->persist($episode);
         }
 

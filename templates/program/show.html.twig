@@ -31,7 +31,7 @@
 				<p>
 					{{ season.description }}
 				</p>
-				<a href="{{ path( 'program_season_show', { seasonId: season.id, programId: program.id } ) }}">
+				<a href="{{ path( 'program_season_show', { seasonId: season.id, programSmlug: program.slug } ) }}">
 					Voir le détail
 				</a>
 			</div>

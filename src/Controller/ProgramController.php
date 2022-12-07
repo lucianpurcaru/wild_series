@@ -14,6 +14,7 @@ use App\Entity\Season;
 use App\Entity\Episode;
 use App\Form\ProgramType;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\String\Slugger\SluggerInterface;
 
 #[Route('/program', name: 'program_')]
 class ProgramController extends AbstractController
@@ -29,16 +30,16 @@ class ProgramController extends AbstractController
     }
 
     #[Route('/new', name: 'new', methods: ['GET', 'POST'])]
-    public function new(Request $request, ProgramRepository $programRepository): Response
+    public function new(Request $request, ProgramRepository $programRepository, SluggerInterface $slugger): Response
     {
         $program = new Program();
         $form = $this->createForm(ProgramType::class, $program);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $slug = $slugger->slug($program->getTitle());
+            $program->setSlug($slug);
             $programRepository->save($program, true);
-
-            // Once the form is submitted, valid and the data inserted in database, you can define the success flash message
             $this->addFlash('success', 'La série a été ajoutée.');
 
             return $this->redirectToRoute('program_index');
@@ -50,7 +51,7 @@ class ProgramController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['GET'],  requirements: ['id' => '\d+'], name: 'show')]
-    public function show(Program $program, SeasonRepository $seasonRepository): Response
+    public function show(Program $program, SeasonRepository $seasonRepository, ProgramDuration $programDuration): Response
     {
         if (!$program) {
             throw $this->createNotFoundException(
@@ -63,6 +64,7 @@ class ProgramController extends AbstractController
         return $this->render('program/show.html.twig', [
             'program' => $program,
             'seasons' => $seasons,
+            'programDuration' => $programDuration->calculate($program, 'minutes'),
         ]);
     }
 
@@ -74,6 +76,8 @@ class ProgramController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $slug = $slugger->slug($program->getTitle());
+            $program->setSlug($slug);
             $programRepository->save($program, true);
 
             $this->addFlash('success', 'La série a été modifiée.');

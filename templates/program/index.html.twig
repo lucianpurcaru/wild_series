@@ -15,15 +15,17 @@
 				/
 				{{ program.title }}
 				- Catégorie :
-				{{program.category.name}}
+				{{
+          program.category.name
+        }}
 			</h2>
 			<p>
 				{{ program.synopsis }}
 			</p>
-			<a href="{{ path( 'program_show', { id: program.id } ) }}">
+			<a href="{{ path( 'program_show', { slug: program.slug } ) }}">
 				Voir la fiche
 			</a>
-			<a href="{{ path( 'program_edit', { id: program.id } ) }}">
+			<a href="{{ path( 'program_edit', { slug: program.slug } ) }}">
 				Editer
 			</a>
 		</div>
@@ -31,5 +33,5 @@
 		Aucune série trouvée.
 	{% endfor %}
 
-	<a href="{{ path('App_index') }}">Retour à l'accueil</a>
+	<a href="{{ path('app_index') }}">Retour à l'accueil</a>
 {% endblock %}

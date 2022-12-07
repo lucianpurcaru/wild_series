@@ -3,31 +3,35 @@
 namespace App\Entity;
 
 use App\Repository\EpisodeRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: EpisodeRepository::class)]
 class Episode
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
-    private $id;
+    #[ORM\Column]
+    private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Season::class, inversedBy: 'episodes')]
+    #[ORM\ManyToOne(inversedBy: 'episodes')]
     #[ORM\JoinColumn(nullable: false)]
-    private $season;
+    private ?Season $season = null;
 
-    #[ORM\Column(type: 'string', length: 255)]
-    #[Assert\NotBlank(message: 'Le champ ne doit pas être vide.')]
-    private $title;
+    #[ORM\Column(length: 255)]
+    private ?string $title = null;
 
-    #[ORM\Column(type: 'integer')]
-    #[Assert\NotBlank(message: 'Le champ ne doit pas être vide')]
-    private $number;
+    #[ORM\Column]
+    private ?int $number = null;
 
-    #[ORM\Column(type: 'text', nullable: true)]
-    private $synopsis;
+    #[ORM\Column(type: Types::TEXT)]
+    private ?string $synopsis = null;
+
+    #[ORM\Column]
+    private ?int $duration = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $slug = null;
 
     public function getId(): ?int
     {
@@ -75,9 +79,33 @@ class Episode
         return $this->synopsis;
     }
 
-    public function setSynopsis(?string $synopsis): self
+    public function setSynopsis(string $synopsis): self
     {
         $this->synopsis = $synopsis;
+
+        return $this;
+    }
+
+    public function getDuration(): ?int
+    {
+        return $this->duration;
+    }
+
+    public function setDuration(int $duration): self
+    {
+        $this->duration = $duration;
+
+        return $this;
+    }
+
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+
+    public function setSlug(string $slug): self
+    {
+        $this->slug = $slug;
 
         return $this;
     }

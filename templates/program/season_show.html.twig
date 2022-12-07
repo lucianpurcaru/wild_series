@@ -1,25 +1,62 @@
-
 {% extends 'base.html.twig' %}
 
-{% block title %}Série #{{ program.title }} - {{ season.number }}{% endblock %}
+{% block title %}
+	Série #{{ program.id }}
+{% endblock %}
 
 {% block body %}
-    <div class="media">
-        <img class="align-self-start mr-3" src="{{program.poster}}" alt="{{ program.title }} poster">
-        <div class="media-body">
-            <h1 class="mt-0">{{ program.title }}</h1>
-            <p>{{ program.synopsis }}</p>
-            <p>Catégorie : {{ program.category.name }}</p>
-            <h2>Episodes de la saison {{ season.number }}</h2>
-            <ul>
-                {% for episode in episodes %}
-                    <li>{{ episode.number }} - {{ episode.title }} ({{ episode.synopsis }})</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-
-    <a href="{{ path("program_show", { id: program.id }) }}">
-        Retour à la liste des saisons de {{ program.title }}
-    </a>
+	<div class="media d-flex flex-column">
+		<div class="program d-flex flex-column w-90 m-auto">
+			<img class="align-self-center mr-3 mb-4" src="{{ program.poster }}" alt="{{ program.title }} poster"/>
+			<div class="media-body">
+				<h1 class="fs-2 text-center mb-3 mt-0">
+					{{ program.title }}
+				</h1>
+				<p class="mb-3">
+					{{ program.synopsis }}
+				</p>
+				<p class="mb-3">
+					Catégorie :
+					{{ program.category.name }}
+				</p>
+			</div>
+			<div class="season d-flex flex-column mt-5">
+				<h2 class="mb-3">
+					Saison
+					{{ season.number }}
+					({{ season.year }})
+				</h2>
+				<p class="mb-3">
+					{{ season.description }}
+				</p>
+			</div>
+		</div>
+		<div class="episodes container-fluid w-90 m-auto border border-2 border-success mt-5 pb-2">
+			<h2>
+				Liste des épisodes :
+			</h2>
+			{% for episode in episodes %}
+				<h3>
+					{{ episode.number }}
+					-
+					{{ episode.title }}
+				</h3>
+				<p>
+					{{ episode.synopsis }}
+				</p>
+				<a href="{{ path( 'program_episode_show', { programSlug: program.slug, seasonId: season.id, episodeSlug: episode.slug } ) }}">
+					Voir l'épisode.
+				</a>
+			{% else %}
+				<p>
+					Aucun épisode trouvé.
+				</p>
+			{% endfor %}
+		</div>
+		<div class="mt-5 pb-3 mx-auto w-90">
+			<a href="{{ path( 'program_show', { slug: program.slug } ) }}">
+				Retour à la série.
+			</a>
+		</div>
+	</div>
 {% endblock %}

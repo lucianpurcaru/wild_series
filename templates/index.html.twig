@@ -1,10 +1,12 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Wild Series
+{% block title %}
+	Wild Series
 {% endblock %}
 
 {% block body %}
-	<section class="bgimage">
-		<img src="{{ asset('build/images/bg.webp') }}" alt="Wild series"/>
-	</section>
+	<h1>
+		{{ message }}
+	</h1>
+	<a href="{{ path('program_index') }}">Voir les séries</a>
 {% endblock %}
