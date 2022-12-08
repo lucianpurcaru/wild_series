@@ -2,16 +2,22 @@
 
 namespace App\DataFixtures;
 
-use Faker\Factory;
-use App\Entity\Season;
 use App\Entity\Program;
-use Doctrine\Persistence\ObjectManager;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
+use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 class ProgramFixtures extends Fixture implements DependentFixtureInterface
 {
+    const COUNTRIES = [
+        'France',
+        'Germany',
+        'United Kingdom',
+        'United States',
+        'Japan',
+        'Russia',
+    ];
     const NB_PROGRAMS = 5;
 
     private SluggerInterface $slugger;
@@ -21,23 +27,20 @@ class ProgramFixtures extends Fixture implements DependentFixtureInterface
         $this->slugger = $slugger;
     }
 
-    public function load(ObjectManager $manager): void
-
+    public function load(ObjectManager $manager)
     {
-        $faker = Factory::create();
-        $j = 1;
-        foreach (CategoryFixtures::CATEGORIES as $categoryName) {
 
-            for ($i = 1; $i <= 10; $i++) {
+        foreach (CategoryFixtures::CATEGORIES as $key => $categoryName) {
+            for ($i = 1; $i <= self::NB_PROGRAMS; $i++) {
                 $program = new Program();
-                $program->setTitle($faker->sentence(3, true));
-                $program->setPoster($categoryName . '.jpg');
-                $program->setSynopsis($faker->sentence(20, true));
+                $program->setTitle('Série ' . $key . $i);
+                $program->setSynopsis('Une série populaire pour les amateurs du genre ' . $categoryName);
                 $program->setCategory($this->getReference('category_' . $categoryName));
-                $this->addReference('program_' . $j, $program);
+                $program->setCountry($this::COUNTRIES[$i]);
+                $program->setYear(2000 + $i);
+                $this->addReference('program_' . ($i + ($key * SELF::NB_PROGRAMS)), $program);
                 $program->setSlug($this->slugger->slug($program->getTitle()));
                 $manager->persist($program);
-                $j++;
                 $manager->flush();
             }
         }
