@@ -7,7 +7,7 @@
 {% block body %}
 	<div class="media d-flex flex-column">
 		<div class="program d-flex flex-column w-90 m-auto">
-			<img class="align-self-center mr-3 mb-4" src="{{ program.poster }}" alt="{{ program.title }} poster"/>
+			<img class="align-self-center mr-3 mb-4" src="{{ vich_uploader_asset(program) }}" alt="{{ program.title }} poster"/>
 			<div class="media-body">
 				<h1 class="fs-2 text-center mb-3 mt-0">
 					{{ program.title }}

@@ -3,14 +3,19 @@
 namespace App\Entity;
 
 use App\Repository\ProgramRepository;
+use DateTime;
+use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\HttpFoundation\File\File;
+use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
 #[ORM\Entity(repositoryClass: ProgramRepository::class)]
+#[Vich\Uploadable]
 #[UniqueEntity(fields: ['title'], message: 'Ce titre existe déjà.')]
 class Program
 {
@@ -34,9 +39,15 @@ class Program
     private ?string $synopsis = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Assert\Url()]
     #[Assert\Length(max: 255, maxMessage: 'L\'URL du poster saisie {{ value }} est trop longue, elle ne devrait pas dépasser {{ limit }} caractères.',)]
     private ?string $poster = null;
+
+    // On va créer un nouvel attribut à notre entité, qui ne sera pas lié à une colonne
+    // Tu peux d’ailleurs voir que l’attribut ORM column n’est pas spécifiée car
+    // On ne rajoute pas de données de type file en bdd
+    #[Vich\UploadableField(mapping: 'poster_file', fileNameProperty: 'poster')]
+    #[Assert\File(maxSize: '1M', mimeTypes: ['image/jpeg', 'image/png', 'image/webp'])]
+    private ?File $posterFile = null;
 
     #[ORM\ManyToOne(inversedBy: 'programs')]
     #[ORM\JoinColumn(nullable: false)]
@@ -59,6 +70,9 @@ class Program
 
     #[ORM\Column(length: 255)]
     private ?string $slug = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?DateTimeInterface $updatedAt = null;
 
     public function __construct()
     {
@@ -208,6 +222,32 @@ class Program
     public function setSlug(string $slug): self
     {
         $this->slug = $slug;
+
+        return $this;
+    }
+
+    public function setPosterFile(File $image = null): Program
+    {
+        $this->posterFile = $image;
+        if ($image) {
+            $this->updatedAt = new DateTime('now');
+        }
+        return $this;
+    }
+
+    public function getPosterFile(): ?File
+    {
+        return $this->posterFile;
+    }
+
+    public function getUpdatedAt(): ?DateTimeInterface
+    {
+        return $this->updatedAt;
+    }
+
+    public function setUpdatedAt(DateTimeInterface $updatedAt): self
+    {
+        $this->updatedAt = $updatedAt;
 
         return $this;
     }

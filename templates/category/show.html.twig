@@ -1,25 +1,23 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}All {{ category.name }}
-{% endblock %}
+{% block title %}Catégorie #{{ category.name }}{% endblock %}
 
 {% block body %}
-    <div class="container py-5">
-        <h1>Toutes les séries de la catégorie {{ category.name }} :
-        </h1>
-        {% for program in programs %}
-            <div class="mt-4">
-                <h2>{{ program.id }}
-                    /
-                    {{ program.title }}</h2>
-                <p>{{ program.synopsis }}</p>
-                <a href="{{ path("program_show", { id: program.id }) }}">Voir la fiche</a>
-            </div>
-        {% else %}
-            Aucune série trouvée.
-        {% endfor %}
+    {% for program in programs %}
+    <div class="media">
+        <img class="align-self-start mr-3" src="{{ vich_uploader_asset(program) }}" alt="{{ program.title }} poster">
+        <div class="media-body">
+            <h1 class="mt-0">{{ program.id }} / {{ program.title }}</h1>
+            <p>{{ program.synopsis }}</p>
+            <p>Catégorie : {{ program.category.name }}</p>
+            <a href="{{ path("program_show", { id: program.id }) }}">Voir la fiche</a>
+        </div>
     </div>
-	<a href="{{ path('App_index') }}">
-		Retour à l'accueil
-	</a>
+    {% else %}
+        Aucune série trouvée.
+    {% endfor %}
+
+    <a href="{{ path('category_index') }}">
+        Retour à la liste des catégories
+    </a>
 {% endblock %}

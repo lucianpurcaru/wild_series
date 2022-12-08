@@ -7,7 +7,7 @@
 {% block body %}
 	<div class="media">
 		<div class="program d-flex flex-column w-90 m-auto">
-			<img class="align-self-center mr-3 mb-4" src="{{ program.poster }}" alt="{{ program.title }} poster"/>
+			<img class="align-self-center mr-3 mb-4" src="{{ vich_uploader_asset(program) }}" alt="{{ program.title }} poster"/>
 			<div class="media-body">
 				<h1 class="fs-2 text-center mb-3 mt-0">
 					{{ program.title }}
@@ -18,6 +18,10 @@
 				<p class="mb-3">
 					Catégorie :
 					{{ program.category.name }}
+				</p>
+				<p class="mb-3">
+					Durée totale :
+					{{ programDuration }}
 				</p>
 			</div>
 		</div>
@@ -31,7 +35,7 @@
 				<p>
 					{{ season.description }}
 				</p>
-				<a href="{{ path( 'program_season_show', { seasonId: season.id, programSmlug: program.slug } ) }}">
+				<a href="{{ path( 'program_season_show', { seasonId: season.id, programSlug: program.slug } ) }}">
 					Voir le détail
 				</a>
 			</div>

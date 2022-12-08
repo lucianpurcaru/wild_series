@@ -6,10 +6,19 @@
 {% block body %}
 	<div class="media">
 		<div class="program d-flex flex-column w-90 m-auto">
+			{% if actor.poster is not empty %}
+				<img class="align-self-center mr-3 mb-4" src="{{ vich_uploader_asset(actor) }}" alt="{{ actor.name }} poster"/>
+			{% endif %}
 			<div class="media-body">
 				<h1 class="fs-2 text-center mb-3 mt-0">
 					{{ actor.name }}
 				</h1>
+				<a href="{{ path( 'actor_edit', { id: actor.id } ) }}">
+					Editer l'acteur
+				</a>
+				<a href="{{ path( 'actor_delete', { id: actor.id } ) }}">
+					Supprimer l'acteur
+				</a>
 			</div>
 		</div>
 		{% for program in actor.programs %}
@@ -21,7 +30,7 @@
 				<p>
 					{{ program.synopsis }}
 				</p>
-				<a href="{{ path( 'program_show', { id: program.id } ) }}">
+				<a href="{{ path( 'program_show', { slug: program.slug } ) }}">
 					Voir le détail
 				</a>
 			</div>

@@ -1,56 +1,50 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}
-	Episode
+	Série #{{ program.id }}
 {% endblock %}
 
 {% block body %}
-	<h1>
-		Episode
-	</h1>
-
-	<table class="table">
-		<tbody>
-			<tr>
-				<th>
-					Id
-				</th>
-				<td>
-					{{ episode.id }}
-				</td>
-			</tr>
-			<tr>
-				<th>
-					Title
-				</th>
-				<td>
-					{{ episode.title }}
-				</td>
-			</tr>
-			<tr>
-				<th>
-					Number
-				</th>
-				<td>
+	<div class="media d-flex flex-column">
+		<div class="program d-flex flex-column w-90 m-auto">
+			<img class="align-self-center mr-3 mb-4" src="{{ vich_uploader_asset(program) }}" alt="{{ program.title }} poster"/>
+			<div class="media-body">
+				<h1 class="fs-2 text-center mb-3 mt-0">
+					{{ program.title }}
+				</h1>
+				<p class="mb-3">
+					{{ program.synopsis }}
+				</p>
+				<p class="mb-3">
+					Catégorie :
+					{{ program.category.name }}
+				</p>
+			</div>
+			<div class="season d-flex flex-column mt-5">
+				<h2 class="mb-3">
+					Saison
+					{{ season.number }}
+					({{ season.year }})
+				</h2>
+				<p class="mb-3">
+					{{ season.description }}
+				</p>
+			</div>
+			<div class="season d-flex flex-column mt-5">
+				<h2 class="mb-3">
+					Episode
 					{{ episode.number }}
-				</td>
-			</tr>
-			<tr>
-				<th>
-					Synopsis
-				</th>
-				<td>
+					- ({{ episode.title }})
+				</h2>
+				<p class="mb-3">
 					{{ episode.synopsis }}
-				</td>
-			</tr>
-		</tbody>
-	</table>
-
-	<a href="{{ path('app_episode_index') }}">back to list</a>
-
-	<a href="{{ path( 'app_episode_edit', { slug: episode.slug } ) }}">
-		edit
-	</a>
-
-	{{ include('episode/_delete_form.html.twig') }}
+				</p>
+			</div>
+		</div>
+		<div class="mt-5 pb-3 mx-auto w-90">
+			<a href="{{ path( 'program_season_show', { programSlug: program.slug, seasonId: season.id } ) }}">
+				Retour à la saison.
+			</a>
+		</div>
+	</div>
 {% endblock %}
