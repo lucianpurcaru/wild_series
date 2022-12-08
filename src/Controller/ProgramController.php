@@ -13,7 +13,10 @@ use App\Repository\SeasonRepository;
 use App\Entity\Season;
 use App\Entity\Episode;
 use App\Form\ProgramType;
+use App\Service\ProgramDuration;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 #[Route('/program', name: 'program_')]
@@ -30,32 +33,42 @@ class ProgramController extends AbstractController
     }
 
     #[Route('/new', name: 'new', methods: ['GET', 'POST'])]
-    public function new(Request $request, ProgramRepository $programRepository, SluggerInterface $slugger): Response
+    public function new(Request $request, ProgramRepository $programRepository, SluggerInterface $slugger, MailerInterface $mailer): Response
     {
-        $program = new Program();
-        $form = $this->createForm(ProgramType::class, $program);
-        $form->handleRequest($request);
+    $program = new Program();
+    $form = $this->createForm(ProgramType::class, $program);
+    $form->handleRequest($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $slug = $slugger->slug($program->getTitle());
-            $program->setSlug($slug);
-            $programRepository->save($program, true);
-            $this->addFlash('success', 'La série a été ajoutée.');
+    if ($form->isSubmitted() && $form->isValid()) {
+        $slug = $slugger->slug($program->getTitle());
+        $program->setSlug($slug);
+        $programRepository->save($program, true);     
+        
+        $email = (new Email())
+                ->from($this->getParameter('mailer_from'))
+                ->to('their_email@example.com')
+                ->subject('Une nouvelle série vient d\'être publiée !')
+                ->html($this->renderView('program/newProgramEmail.html.twig', ['program' => $program]));
 
-            return $this->redirectToRoute('program_index');
-        }
+        $mailer->send($email);
+
+        // Once the form is submitted, valid and the data inserted in database, you can define the success flash message
+        $this->addFlash('success', 'The new program has been created');
+
+        return $this->redirectToRoute('program_index');
+    }
 
         return $this->renderForm('program/new.html.twig', [
             'form' => $form,
         ]);
     }
 
-    #[Route('/{id}', methods: ['GET'],  requirements: ['id' => '\d+'], name: 'show')]
+    #[Route('/{slug}', methods: ['GET'], name: 'show')]
     public function show(Program $program, SeasonRepository $seasonRepository, ProgramDuration $programDuration): Response
     {
         if (!$program) {
             throw $this->createNotFoundException(
-                'Pas de saison trouvée.'
+                'No program with this id found in program\'s table.'
             );
         }
 
@@ -68,8 +81,8 @@ class ProgramController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Program $program, ProgramRepository $programRepository): Response
+    #[Route('/{slug}/edit', name: 'edit', methods: ['GET', 'POST'])]
+    public function edit(Request $request, Program $program, ProgramRepository $programRepository, SluggerInterface $slugger): Response
     {
 
         $form = $this->createForm(ProgramType::class, $program);
@@ -80,7 +93,7 @@ class ProgramController extends AbstractController
             $program->setSlug($slug);
             $programRepository->save($program, true);
 
-            $this->addFlash('success', 'La série a été modifiée.');
+            $this->addFlash('success', 'The program has been edited successfully');
 
             return $this->redirectToRoute('program_index', [], Response::HTTP_SEE_OTHER);
         }
@@ -91,37 +104,32 @@ class ProgramController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'delete', methods: ['POST'])]
+    #[Route('/{slug}', name: 'delete', methods: ['POST'])]
     public function delete(Request $request, Program $program, ProgramRepository $programRepository): Response
     {
-        if ($this->isCsrfTokenValid('delete' . $program->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete'.$program->getId(), $request->request->get('_token'))) {
             $programRepository->remove($program, true);
 
-            $this->addFlash('danger', 'La série a été supprimée.');
+            $this->addFlash('danger', 'The program has been deleted successfully');
         }
 
         return $this->redirectToRoute('program_index', [], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route(
-        '/{programId}/season/{seasonId}',
-        methods: ['GET'],
-        requirements: ['programId' => '\d+', 'seasonId' => '\d+'],
-        name: 'season_show'
-    )]
-    #[ParamConverter('program', options: ['mapping' => ['programId' => 'id']])]
+    #[Route('/{programSlug}/season/{seasonId}', methods: ['GET'], name: 'season_show')]
+    #[ParamConverter('program', options: ['mapping' => ['programSlug' => 'slug']])]
     #[ParamConverter('season', options: ['mapping' => ['seasonId' => 'id']])]
     public function showSeason(Program $program, Season $season, EpisodeRepository $episodeRepository): Response
     {
         if (!$program) {
             throw $this->createNotFoundException(
-                'Pas de série trouvée.'
+                'No program with this id found in program\'s table.'
             );
         }
 
         if (!$season) {
             throw $this->createNotFoundException(
-                'Pas de saison trouvée dans la série.'
+                'No season with this id found for this program.'
             );
         }
 
@@ -134,32 +142,27 @@ class ProgramController extends AbstractController
         ]);
     }
 
-    #[Route(
-        '/{programId}/season/{seasonId}/episode/{episodeId}',
-        methods: ['GET'],
-        requirements: ['programId' => '\d+', 'seasonId' => '\d+'],
-        name: 'episode_show'
-    )]
-    #[ParamConverter('program', options: ['mapping' => ['programId' => 'id']])]
+    #[Route('/{programSlug}/season/{seasonId}/episode/{episodeSlug}', methods: ['GET'],  requirements: ['seasonId' => '\d+'], name: 'episode_show')]
+    #[ParamConverter('program', options: ['mapping' => ['programSlug' => 'slug']])]
     #[ParamConverter('season', options: ['mapping' => ['seasonId' => 'id']])]
-    #[ParamConverter('episode', options: ['mapping' => ['episodeId' => 'id']])]
+    #[ParamConverter('episode', options: ['mapping' => ['episodeSlug' => 'slug']])]
     public function showEpisode(Program $program, Season $season, Episode $episode): Response
     {
         if (!$program) {
             throw $this->createNotFoundException(
-                'Pas de saison trouvée.'
+                'No program with this id found in program\'s table.'
             );
         }
 
         if (!$season) {
             throw $this->createNotFoundException(
-                'Pas de saison trouvée.'
+                'No season with this id found for this program.'
             );
         }
 
         if (!$episode) {
             throw $this->createNotFoundException(
-                'Pas d\'épisode trouvé dans la saison.'
+                'No episode with this id found for this program.'
             );
         }
 
