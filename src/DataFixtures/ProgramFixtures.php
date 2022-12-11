@@ -3,22 +3,37 @@
 namespace App\DataFixtures;
 
 use App\Entity\Program;
-use Doctrine\Bundle\FixturesBundle\Fixture;
-use Doctrine\Common\DataFixtures\DependentFixtureInterface;
+use App\Service\Slugify;
 use Doctrine\Persistence\ObjectManager;
+use Doctrine\Bundle\FixturesBundle\Fixture;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 
 class ProgramFixtures extends Fixture implements DependentFixtureInterface
 {
-    const COUNTRIES = [
-        'France',
-        'Germany',
-        'United Kingdom',
-        'United States',
-        'Japan',
-        'Russia',
+    
+    public const PROGRAMS = [
+        ['id' => 0,
+        'title' => 'Lucifer',
+        'synopsis' => 'The Devil among us',
+        'category' => 'category_Action'],
+        ['id' => 1,
+        'title' => 'Brooklyn Nine Nine',
+        'synopsis' => 'Fun at the police station',
+        'category' => 'category_Comedie'],
+        ['id' => 2,
+        'title' => 'Snowpiercer',
+        'synopsis' => 'The last humans all in one train',
+        'category' => 'category_Aventure'],
+        ['id' => 3,
+        'title' => 'Arcane',
+        'synopsis' => 'Jinx and Vi will show you a rael serie',
+        'category' => 'category_Aventure'],
+        ['id' => 4,
+        'title' => 'Vikings',
+        'synopsis' => 'Ragnar and his capaigne',
+        'category' => 'category_Action'],
     ];
-    const NB_PROGRAMS = 5;
 
     private SluggerInterface $slugger;
 
@@ -27,30 +42,29 @@ class ProgramFixtures extends Fixture implements DependentFixtureInterface
         $this->slugger = $slugger;
     }
 
-    public function load(ObjectManager $manager)
-    {
 
-        foreach (CategoryFixtures::CATEGORIES as $key => $categoryName) {
-            for ($i = 1; $i <= self::NB_PROGRAMS; $i++) {
-                $program = new Program();
-                $program->setTitle('Série ' . $key . $i);
-                $program->setSynopsis('Une série populaire pour les amateurs du genre ' . $categoryName);
-                $program->setCategory($this->getReference('category_' . $categoryName));
-                $program->setCountry($this::COUNTRIES[$i]);
-                $program->setYear(2000 + $i);
-                $this->addReference('program_' . ($i + ($key * SELF::NB_PROGRAMS)), $program);
-                $program->setSlug($this->slugger->slug($program->getTitle()));
-                $manager->persist($program);
-                $manager->flush();
-            }
+    public function load(ObjectManager $manager): void
+    {
+        foreach(self::PROGRAMS as $programItems) {
+            $program = new Program();
+            $program->setTitle($programItems['title']);
+            $program->setSlug($this->slugger->slug($program->getTitle()));
+            $program->setSynopsis($programItems['synopsis']);
+            $program->setCategory($this->getReference($programItems['category']));
+            $manager->persist($program);
+            $this->addReference('program_' . $programItems['id'], $program);
+            
         }
+
+        $manager->flush();
+        
     }
 
     public function getDependencies()
     {
-        // Tu retournes ici toutes les classes de fixtures dont ProgramFixtures dépend
         return [
-            CategoryFixtures::class,
+          CategoryFixtures::class,
         ];
     }
+
 }
