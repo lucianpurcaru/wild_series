@@ -20,6 +20,7 @@ use App\Service\ProgramDuration;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 
@@ -46,6 +47,7 @@ class ProgramController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $slug = $slugger->slug($program->getTitle());
             $program->setSlug($slug);
+            $program->setOwner($this->getUser());
             $programRepository->save($program, true);
 
             $email = (new Email())
@@ -88,7 +90,11 @@ class ProgramController extends AbstractController
     #[Route('/{slug}/edit', name: 'edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Program $program, ProgramRepository $programRepository, SluggerInterface $slugger): Response
     {
-
+        // Check wether the logged in user is the owner of the program
+        if (!($this->getUser() === $program->getOwner())) {
+            // If not the owner, throws a 403 Access Denied exception
+            throw new AccessDeniedException('Only the owner can edit the program!');
+        }
         $form = $this->createForm(ProgramType::class, $program);
         $form->handleRequest($request);
 
@@ -118,6 +124,19 @@ class ProgramController extends AbstractController
         }
 
         return $this->redirectToRoute('program_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/comment/{commentId}', name: 'delete_comment', methods: ['POST'])]
+    #[ParamConverter('comment', options: ['mapping' => ['commentId' => 'id']])]
+    public function deleteComment(Comment $comment, CommentRepository $commentRepository, Request $request): Response
+    {
+        if ($this->isCsrfTokenValid('delete' . $comment->getId(), $request->request->get('_token'))) {
+            $commentRepository->remove($comment, true);
+
+            $this->addFlash('danger', 'The comment has been deleted successfully');
+        }
+
+        return $this->redirectToRoute('program_episode_show', ['programSlug' => $request->request->get('program'), 'seasonId' => $request->request->get('season'), 'episodeSlug' => $request->request->get('episode')], Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{programSlug}/season/{seasonId}', methods: ['GET'], name: 'season_show')]
@@ -191,6 +210,8 @@ class ProgramController extends AbstractController
         } else {
             $commented = false;
         }
+
+        dump($request);
 
         return $this->render('program/episode_show.html.twig', [
             'program' => $program,

@@ -57,6 +57,8 @@
 			<li>Aucun acteur pour cette série</li>
 		{% endfor %}
 	</ul>
-
-	<a href="{{ path('program_index') }}">Retour à la liste des programmes</a>
-{% endblock %}
+	{% if is_granted("ROLE_ADMIN") or app.user is same as(program.owner) %}
+		<a href="{{ path('program_edit', { 'slug': program.slug} ) }}">Éditer</a>
+		{%endif%}
+		<a href="{{ path('program_index') }}">Retour à la liste des programmes</a>
+	{% endblock %}
