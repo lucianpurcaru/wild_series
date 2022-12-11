@@ -32,7 +32,7 @@ class Program
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank(message: 'Le titre ne peut pas être vide.')]
     #[Assert\Regex(
-        pattern: '/^plus belle la vie$/i',
+        pattern: '/plus belle la vie/i',
         match: false,
         message: 'On parle de vraies séries ici',
     )]

@@ -2,6 +2,7 @@
 // src/Controller/ProgramController.php
 namespace App\Controller;
 
+use App\Entity\Comment;
 use App\Repository\EpisodeRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,11 +14,14 @@ use App\Repository\SeasonRepository;
 use App\Entity\Season;
 use App\Entity\Episode;
 use App\Form\ProgramType;
+use App\Form\CommentType;
+use App\Repository\CommentRepository;
 use App\Service\ProgramDuration;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\String\Slugger\SluggerInterface;
+
 
 #[Route('/program', name: 'program_')]
 class ProgramController extends AbstractController
@@ -35,28 +39,28 @@ class ProgramController extends AbstractController
     #[Route('/new', name: 'new', methods: ['GET', 'POST'])]
     public function new(Request $request, ProgramRepository $programRepository, SluggerInterface $slugger, MailerInterface $mailer): Response
     {
-    $program = new Program();
-    $form = $this->createForm(ProgramType::class, $program);
-    $form->handleRequest($request);
+        $program = new Program();
+        $form = $this->createForm(ProgramType::class, $program);
+        $form->handleRequest($request);
 
-    if ($form->isSubmitted() && $form->isValid()) {
-        $slug = $slugger->slug($program->getTitle());
-        $program->setSlug($slug);
-        $programRepository->save($program, true);     
-        
-        $email = (new Email())
+        if ($form->isSubmitted() && $form->isValid()) {
+            $slug = $slugger->slug($program->getTitle());
+            $program->setSlug($slug);
+            $programRepository->save($program, true);
+
+            $email = (new Email())
                 ->from($this->getParameter('mailer_from'))
                 ->to('their_email@example.com')
                 ->subject('Une nouvelle série vient d\'être publiée !')
                 ->html($this->renderView('program/newProgramEmail.html.twig', ['program' => $program]));
 
-        $mailer->send($email);
+            $mailer->send($email);
 
-        // Once the form is submitted, valid and the data inserted in database, you can define the success flash message
-        $this->addFlash('success', 'The new program has been created');
+            // Once the form is submitted, valid and the data inserted in database, you can define the success flash message
+            $this->addFlash('success', 'The new program has been created');
 
-        return $this->redirectToRoute('program_index');
-    }
+            return $this->redirectToRoute('program_index');
+        }
 
         return $this->renderForm('program/new.html.twig', [
             'form' => $form,
@@ -107,7 +111,7 @@ class ProgramController extends AbstractController
     #[Route('/{slug}', name: 'delete', methods: ['POST'])]
     public function delete(Request $request, Program $program, ProgramRepository $programRepository): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$program->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $program->getId(), $request->request->get('_token'))) {
             $programRepository->remove($program, true);
 
             $this->addFlash('danger', 'The program has been deleted successfully');
@@ -142,11 +146,11 @@ class ProgramController extends AbstractController
         ]);
     }
 
-    #[Route('/{programSlug}/season/{seasonId}/episode/{episodeSlug}', methods: ['GET'],  requirements: ['seasonId' => '\d+'], name: 'episode_show')]
+    #[Route('/{programSlug}/season/{seasonId}/episode/{episodeSlug}', methods: ['GET', 'POST'],  requirements: ['seasonId' => '\d+'], name: 'episode_show')]
     #[ParamConverter('program', options: ['mapping' => ['programSlug' => 'slug']])]
     #[ParamConverter('season', options: ['mapping' => ['seasonId' => 'id']])]
     #[ParamConverter('episode', options: ['mapping' => ['episodeSlug' => 'slug']])]
-    public function showEpisode(Program $program, Season $season, Episode $episode): Response
+    public function showEpisode(Program $program, Season $season, Episode $episode, Request $request, CommentRepository $commentRepository): Response
     {
         if (!$program) {
             throw $this->createNotFoundException(
@@ -165,11 +169,36 @@ class ProgramController extends AbstractController
                 'No episode with this id found for this program.'
             );
         }
+        $comment = new Comment();
+        $form = $this->createForm(CommentType::class, $comment);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $comment->setAuthor($this->getUser());
+            $comment->setEpisode($episode);
+            $commentRepository->save($comment, true);
+
+            $this->addFlash('success', 'The comment has been posted successfully');
+
+            return $this->redirectToRoute('program_episode_show', ['programSlug' => $program->getSlug(), 'seasonId' => $season->getId(), 'episodeSlug' => $episode->getSlug()], Response::HTTP_SEE_OTHER);
+        }
+
+        $comments = $commentRepository->findBy(['episode' => $episode]);
+
+        $commentedCheck = $commentRepository->findBy(['author' => $this->getUser(), 'episode' => $episode], ['id' => 'DESC']);
+        if ($commentedCheck) {
+            $commented = true;
+        } else {
+            $commented = false;
+        }
 
         return $this->render('program/episode_show.html.twig', [
             'program' => $program,
             'season' => $season,
             'episode' => $episode,
+            'form' => $form->createView(),
+            'comments' => $comments,
+            'commented' => $commented
         ]);
     }
 }
