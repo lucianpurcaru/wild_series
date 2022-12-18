@@ -2,27 +2,28 @@
 // src/Controller/ProgramController.php
 namespace App\Controller;
 
-use App\Entity\Comment;
-use App\Repository\EpisodeRepository;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
-use App\Repository\ProgramRepository;
-use App\Entity\Program;
-use App\Repository\SeasonRepository;
 use App\Entity\Season;
+use App\Entity\Comment;
 use App\Entity\Episode;
+use App\Entity\Program;
+use App\Form\CommentType;
 use App\Form\ProgramType;
 use App\Form\SearchProgramType;
-use App\Form\CommentType;
-use App\Repository\CommentRepository;
 use App\Service\ProgramDuration;
+use Symfony\Component\Mime\Email;
+use App\Repository\SeasonRepository;
+use App\Repository\CommentRepository;
+use App\Repository\EpisodeRepository;
+use App\Repository\ProgramRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Email;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 
 #[Route('/program', name: 'program_')]
@@ -80,6 +81,29 @@ class ProgramController extends AbstractController
         return $this->renderForm('program/new.html.twig', [
             'form' => $form,
         ]);
+    }
+
+    #[Route('/{id}/watchlist', methods: ['GET', 'POST'], name: 'watchlist')]
+    public function addToWatchlist(Program $program, EntityManagerInterface $entityManager): Response
+    {
+        if (!$program) {
+            throw $this->createNotFoundException(
+                'No program with this id found in program\'s table.'
+            );
+        }
+
+        /** @var User */
+        $user = $this->getUser();
+
+        if ($user->isInWatchlist($program)) {
+            $user->removeFromWatchlist($program);
+        } else {
+            $user->addToWatchlist($program);
+        }
+
+        $entityManager->flush();
+
+        return $this->redirectToRoute('program_show', ['slug' => $program->getSlug()], Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{slug}', methods: ['GET'], name: 'show')]

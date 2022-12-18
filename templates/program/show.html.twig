@@ -12,6 +12,9 @@
 				<h1 class="fs-2 text-center mb-3 mt-0">
 					{{ program.title }}
 				</h1>
+				<a href="{{ path('program_watchlist', {id: program.id})}}">
+					<i class="bi {{ app.user.isInWatchlist(program) ? 'bi-heart-fill' : 'bi-heart' }}"></i>
+				</a>
 				<p class="mb-3">
 					{{ program.synopsis }}
 				</p>
