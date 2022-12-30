@@ -2,15 +2,20 @@
 
 namespace App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Repository\CategoryRepository;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+
 
 class DefaultController extends AbstractController
 {
-    #[Route('/', name:'App_index')]
-    public function index(): Response
+    #[Route('/', name: 'App_index')]
+    public function index(CategoryRepository $categoryRepository, Request $request): Response
     {
-        return $this->render('index.html.twig');
+        return $this->render('index.html.twig', [
+            'categories' => $categoryRepository->findAll(),
+        ]);
     }
 }
