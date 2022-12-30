@@ -1,262 +1,222 @@
 <?php
-// src/Controller/ProgramController.php
+
 namespace App\Controller;
 
-use App\Entity\Season;
-use App\Entity\Comment;
-use App\Entity\Episode;
+
 use App\Entity\Program;
-use App\Form\CommentType;
 use App\Form\ProgramType;
-use App\Form\SearchProgramType;
 use App\Service\ProgramDuration;
 use Symfony\Component\Mime\Email;
-use App\Repository\SeasonRepository;
-use App\Repository\CommentRepository;
+use App\Repository\UserRepository;
 use App\Repository\EpisodeRepository;
 use App\Repository\ProgramRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\CategoryRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 
 #[Route('/program', name: 'program_')]
 class ProgramController extends AbstractController
 {
-    #[Route('/', name: 'index')]
-    public function index(Request $request, ProgramRepository $programRepository): Response
+
+    private SluggerInterface $slugger;
+
+    public function __construct(SluggerInterface $slugger)
     {
-        $form = $this->createForm(SearchProgramType::class);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $search = $form->getData()['search'];
-            $programs = $programRepository->findLikeName($search);
-        } else {
-            $programs = $programRepository->findAll();
-        }
-
-        return $this->render(
-            'program/index.html.twig',
-            [
-                'programs' => $programs,
-                'form' => $form->createView()
-            ]
-        );
+        $this->slugger = $slugger;
     }
 
-    #[Route('/new', name: 'new', methods: ['GET', 'POST'])]
-    public function new(Request $request, ProgramRepository $programRepository, SluggerInterface $slugger, MailerInterface $mailer): Response
+
+    #[Route('/app', name: 'app_program_index', methods: ['GET'])]
+    public function app_index(ProgramRepository $programRepository, CategoryRepository $categoryRepository): Response
+    {
+        return $this->render('program/app_index.html.twig', [
+            'programs' => $programRepository->findAll(),
+            'categories' => $categoryRepository->findAll(),
+        ]);
+    }
+
+
+    #[Route('/', name: 'index')]
+    public function index(ProgramRepository $programRepository, CategoryRepository $categoryRepository): Response
+    {
+
+        return $this->render('program/index.html.twig', [
+            'programs' => $programRepository->findAll(),
+            'categories' => $categoryRepository->findAll(),
+        ]);
+    }
+
+
+    #[IsGranted('ROLE_ADMIN')]
+    #[Route('/new', name: 'app_program_new')]
+    public function new(Request $request, MailerInterface $mailer, ProgramRepository $programRepository, CategoryRepository $categoryRepository): Response
     {
         $program = new Program();
         $form = $this->createForm(ProgramType::class, $program);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $slug = $slugger->slug($program->getTitle());
+            $slug = $this->slugger->slug($program->getTitle());
             $program->setSlug($slug);
             $program->setOwner($this->getUser());
             $programRepository->save($program, true);
+            $this->addFlash('success', 'Le programme est ajouté.');
 
-            $email = (new Email())
+            $mail = (new Email())
                 ->from($this->getParameter('mailer_from'))
-                ->to('their_email@example.com')
-                ->subject('Une nouvelle série vient d\'être publiée !')
+                ->to('william.bouet.14@gmail.com')
+                ->subject('Une nouvelle série dans la base')
                 ->html($this->renderView('program/newProgramEmail.html.twig', ['program' => $program]));
+            $mailer->send($mail);
 
-            $mailer->send($email);
 
-            // Once the form is submitted, valid and the data inserted in database, you can define the success flash message
-            $this->addFlash('success', 'The new program has been created');
 
-            return $this->redirectToRoute('program_index');
+            return $this->redirectToRoute('program_app_program_index', ['categories' => $categoryRepository->findAll(),]);
         }
 
         return $this->renderForm('program/new.html.twig', [
             'form' => $form,
+            'categories' => $categoryRepository->findAll(),
+
         ]);
     }
 
-    #[Route('/{id}/watchlist', methods: ['GET', 'POST'], name: 'watchlist')]
-    public function addToWatchlist(Program $program, EntityManagerInterface $entityManager): Response
+    #[Route('/program/{id}/watchlist', methods: ['GET'], name: 'add_watchlist')]
+    public function addToWatchlist(int $id, ProgramRepository $programRepository, UserRepository $userRepository): JsonResponse
     {
+        $program = $programRepository->findOneBy(['id' => $id]);
+
         if (!$program) {
             throw $this->createNotFoundException(
-                'No program with this id found in program\'s table.'
+                'Aucun programme trouvé.'
             );
         }
 
-        /** @var User */
+        /** @var \App\Entity\User */
         $user = $this->getUser();
+        if ($user) {
+            if ($user->isInWatchlist($program)) {
+                $user->removeFromWatchlist($program);
+            } else {
+                $user->addToWatchlist($program);
+            }
 
-        if ($user->isInWatchlist($program)) {
-            $user->removeFromWatchlist($program);
+            $userRepository->save($user, true);
         } else {
-            $user->addToWatchlist($program);
+            $this->addFlash('danger', 'Veuillez vous connecter.');
         }
 
-        $entityManager->flush();
-
-        return $this->redirectToRoute('program_show', ['slug' => $program->getSlug()], Response::HTTP_SEE_OTHER);
+        return $this->json(['isInWatchlist' => $user->isInWatchlist($program)]);
     }
 
-    #[Route('/{slug}', methods: ['GET'], name: 'show')]
-    public function show(Program $program, SeasonRepository $seasonRepository, ProgramDuration $programDuration): Response
-    {
-        if (!$program) {
-            throw $this->createNotFoundException(
-                'No program with this id found in program\'s table.'
-            );
-        }
 
-        $seasons = $seasonRepository->findBy(['program' => $program], ['id' => 'DESC']);
+    #[Route('/list/{categoryId}', requirements: ['categoryId' => '^[0-9]+$'], methods: ['GET'], name: 'list')]
+    public function list(int $categoryId, ProgramRepository $programRepository, CategoryRepository $categoryRepository): Response
+    {
+        $programs = $programRepository->findBy(['category' => $categoryId]);
+        if (!$programs)
+            throw $this->createNotFoundException('Aucune série trouvée');
+
+        return $this->render('program/list.html.twig', [
+            'programs' => $programs,
+            'categories' => $categoryRepository->findAll(),
+        ]);
+    }
+
+    #[Route('/{slug}', name: 'app_program_show', methods: ['GET'])]
+    public function app_show(Program $program, CategoryRepository $categoryRepository,): Response
+    {
+        return $this->render('program/app_show.html.twig', [
+            'program' => $program,
+            'categories' => $categoryRepository->findAll(),
+        ]);
+    }
+
+
+    #[Route('/show/{slug}', requirements: ['slug' => '^[a-zA-Z0-9\-]+$'], methods: ['GET'], name: 'show')]
+    public function show(Program $program,  CategoryRepository $categoryRepository, ProgramDuration $programDuration): Response
+    { //avec la méthode magique ^
+        if (!$program)
+            throw $this->createNotFoundException('Aucune série trouvée');
 
         return $this->render('program/show.html.twig', [
             'program' => $program,
-            'seasons' => $seasons,
-            'programDuration' => $programDuration->calculate($program, 'minutes'),
+            'seasons' => $program->getSeasons(),
+            'categories' => $categoryRepository->findAll(),
+            'duration' => $programDuration->calculate($program),
         ]);
     }
 
-    #[Route('/{slug}/edit', name: 'edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Program $program, ProgramRepository $programRepository, SluggerInterface $slugger): Response
+
+
+
+    #[Route('/program/{slug}/seasons/{seasonId}', requirements: ['seasonId' => '^[0-9]+$', 'slug' => '^[a-zA-Z0-9\-]+$',], methods: ['GET'], name: 'season_show')]
+    public function showSeason(
+        string $slug,
+        int $seasonId,
+        Program $program,
+        EpisodeRepository $episodeRepository,
+        CategoryRepository $categoryRepository,
+        ProgramRepository $programRepository,
+    ): Response {
+
+        $programs = $programRepository->findBy(['slug' => $slug]);
+        $episodes = $episodeRepository->findBy(['season' => $seasonId]);
+
+        if (!$episodes)
+            throw $this->createNotFoundException('Aucune season trouvée');
+
+        return $this->render('program/season_show.html.twig', [
+            'program' => $program,
+            'programs' => $programs,
+            'episodes' => $episodes,
+            'categories' => $categoryRepository->findAll(),
+        ]);
+    }
+
+    #[IsGranted('ROLE_ADMIN')]
+    #[Route('/delete/{id}', name: 'app_program_delete', methods: ['POST'])]
+    public function delete(Request $request, Program $program, ProgramRepository $programRepository): Response
     {
-        // Check wether the logged in user is the owner of the program
-        if (!($this->getUser() === $program->getOwner())) {
-            // If not the owner, throws a 403 Access Denied exception
-            throw new AccessDeniedException('Only the owner can edit the program!');
+        if ($this->isCsrfTokenValid('delete' . $program->getId(), $request->request->get('_token'))) {
+            $programRepository->remove($program, true);
+            $this->addFlash('danger', 'Le programme est supprimé.');
         }
+
+        return $this->redirectToRoute('program_app_program_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/edit/{slug}', name: 'app_program_edit', methods: ['GET', 'POST'])]
+    public function edit(Request $request, Program $program, ProgramRepository $programRepository, CategoryRepository $categoryRepository,): Response
+    {
+        if (!$this->isGranted('ROLE_ADMIN') && $this->getUser() !== $program->getOwner()) {
+
+            throw $this->createAccessDeniedException('Vous n\'êtes pas autorisé à modifier ce programme !');
+        }
+
         $form = $this->createForm(ProgramType::class, $program);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $slug = $slugger->slug($program->getTitle());
+            $slug = $this->slugger->slug($program->getTitle());
             $program->setSlug($slug);
             $programRepository->save($program, true);
+            $this->addFlash('success', 'Le programme est modifié.');
 
-            $this->addFlash('success', 'The program has been edited successfully');
-
-            return $this->redirectToRoute('program_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('program_app_program_index', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->renderForm('program/edit.html.twig', [
             'program' => $program,
             'form' => $form,
-        ]);
-    }
-
-    #[Route('/{slug}', name: 'delete', methods: ['POST'])]
-    public function delete(Request $request, Program $program, ProgramRepository $programRepository): Response
-    {
-        if ($this->isCsrfTokenValid('delete' . $program->getId(), $request->request->get('_token'))) {
-            $programRepository->remove($program, true);
-
-            $this->addFlash('danger', 'The program has been deleted successfully');
-        }
-
-        return $this->redirectToRoute('program_index', [], Response::HTTP_SEE_OTHER);
-    }
-
-    #[Route('/comment/{commentId}', name: 'delete_comment', methods: ['POST'])]
-    #[ParamConverter('comment', options: ['mapping' => ['commentId' => 'id']])]
-    public function deleteComment(Comment $comment, CommentRepository $commentRepository, Request $request): Response
-    {
-        if ($this->isCsrfTokenValid('delete' . $comment->getId(), $request->request->get('_token'))) {
-            $commentRepository->remove($comment, true);
-
-            $this->addFlash('danger', 'The comment has been deleted successfully');
-        }
-
-        return $this->redirectToRoute('program_episode_show', ['programSlug' => $request->request->get('program'), 'seasonId' => $request->request->get('season'), 'episodeSlug' => $request->request->get('episode')], Response::HTTP_SEE_OTHER);
-    }
-
-    #[Route('/{programSlug}/season/{seasonId}', methods: ['GET'], name: 'season_show')]
-    #[ParamConverter('program', options: ['mapping' => ['programSlug' => 'slug']])]
-    #[ParamConverter('season', options: ['mapping' => ['seasonId' => 'id']])]
-    public function showSeason(Program $program, Season $season, EpisodeRepository $episodeRepository): Response
-    {
-        if (!$program) {
-            throw $this->createNotFoundException(
-                'No program with this id found in program\'s table.'
-            );
-        }
-
-        if (!$season) {
-            throw $this->createNotFoundException(
-                'No season with this id found for this program.'
-            );
-        }
-
-        $episodes = $episodeRepository->findBy(['season' => $season]);
-
-        return $this->render('program/season_show.html.twig', [
-            'program' => $program,
-            'season' => $season,
-            'episodes' => $episodes,
-        ]);
-    }
-
-    #[Route('/{programSlug}/season/{seasonId}/episode/{episodeSlug}', methods: ['GET', 'POST'],  requirements: ['seasonId' => '\d+'], name: 'episode_show')]
-    #[ParamConverter('program', options: ['mapping' => ['programSlug' => 'slug']])]
-    #[ParamConverter('season', options: ['mapping' => ['seasonId' => 'id']])]
-    #[ParamConverter('episode', options: ['mapping' => ['episodeSlug' => 'slug']])]
-    public function showEpisode(Program $program, Season $season, Episode $episode, Request $request, CommentRepository $commentRepository): Response
-    {
-        if (!$program) {
-            throw $this->createNotFoundException(
-                'No program with this id found in program\'s table.'
-            );
-        }
-
-        if (!$season) {
-            throw $this->createNotFoundException(
-                'No season with this id found for this program.'
-            );
-        }
-
-        if (!$episode) {
-            throw $this->createNotFoundException(
-                'No episode with this id found for this program.'
-            );
-        }
-        $comment = new Comment();
-        $form = $this->createForm(CommentType::class, $comment);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $comment->setAuthor($this->getUser());
-            $comment->setEpisode($episode);
-            $commentRepository->save($comment, true);
-
-            $this->addFlash('success', 'The comment has been posted successfully');
-
-            return $this->redirectToRoute('program_episode_show', ['programSlug' => $program->getSlug(), 'seasonId' => $season->getId(), 'episodeSlug' => $episode->getSlug()], Response::HTTP_SEE_OTHER);
-        }
-
-        $comments = $commentRepository->findBy(['episode' => $episode]);
-
-        $commentedCheck = $commentRepository->findBy(['author' => $this->getUser(), 'episode' => $episode], ['id' => 'DESC']);
-        if ($commentedCheck) {
-            $commented = true;
-        } else {
-            $commented = false;
-        }
-
-        dump($request);
-
-        return $this->render('program/episode_show.html.twig', [
-            'program' => $program,
-            'season' => $season,
-            'episode' => $episode,
-            'form' => $form->createView(),
-            'comments' => $comments,
-            'commented' => $commented
+            'categories' => $categoryRepository->findAll(),
         ]);
     }
 }
