@@ -38,7 +38,6 @@ class ProgramController extends AbstractController
     {
         return $this->render('program/app_index.html.twig', [
             'programs' => $programRepository->findAll(),
-            'categories' => $categoryRepository->findAll(),
         ]);
     }
 
@@ -49,7 +48,6 @@ class ProgramController extends AbstractController
 
         return $this->render('program/index.html.twig', [
             'programs' => $programRepository->findAll(),
-            'categories' => $categoryRepository->findAll(),
         ]);
     }
 
@@ -83,7 +81,6 @@ class ProgramController extends AbstractController
 
         return $this->renderForm('program/new.html.twig', [
             'form' => $form,
-            'categories' => $categoryRepository->findAll(),
 
         ]);
     }
@@ -126,7 +123,6 @@ class ProgramController extends AbstractController
 
         return $this->render('program/list.html.twig', [
             'programs' => $programs,
-            'categories' => $categoryRepository->findAll(),
         ]);
     }
 
@@ -135,7 +131,6 @@ class ProgramController extends AbstractController
     {
         return $this->render('program/app_show.html.twig', [
             'program' => $program,
-            'categories' => $categoryRepository->findAll(),
         ]);
     }
 
@@ -149,7 +144,6 @@ class ProgramController extends AbstractController
         return $this->render('program/show.html.twig', [
             'program' => $program,
             'seasons' => $program->getSeasons(),
-            'categories' => $categoryRepository->findAll(),
             'duration' => $programDuration->calculate($program),
         ]);
     }
@@ -177,7 +171,6 @@ class ProgramController extends AbstractController
             'program' => $program,
             'programs' => $programs,
             'episodes' => $episodes,
-            'categories' => $categoryRepository->findAll(),
         ]);
     }
 
@@ -216,7 +209,6 @@ class ProgramController extends AbstractController
         return $this->renderForm('program/edit.html.twig', [
             'program' => $program,
             'form' => $form,
-            'categories' => $categoryRepository->findAll(),
         ]);
     }
 }

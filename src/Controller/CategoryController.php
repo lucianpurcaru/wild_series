@@ -1,75 +1,136 @@
 <?php
-// src/Controller/CategoryController.php
+
 namespace App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
-use App\Repository\CategoryRepository;
-use App\Repository\ProgramRepository;
 use App\Entity\Category;
 use App\Form\CategoryType;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+use App\Repository\ProgramRepository;
+use App\Repository\CategoryRepository;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Form\Extension\Core\Type\SearchType;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route('/category', name: 'category_')]
 class CategoryController extends AbstractController
 {
-    #[Route('/', name: 'index')]
-    public function index(CategoryRepository $categoryRepository): Response
+
+    #[Route('/list', name: 'app_category_index', methods: ['GET'])]
+    public function app_index(CategoryRepository $categoryRepository): Response
     {
-        $categories = $categoryRepository->findAll();
-        return $this->render(
-            'category/index.html.twig',
-            ['categories' => $categories]
-        );
+        return $this->render('category/app_index.html.twig', [
+        ]);
     }
 
-    #[Route('/new', name: 'new')]
+
+    #[Route('/', name: 'index')]
+    public function index(Request $request, CategoryRepository $categoryRepository, ProgramRepository $programRepository): Response
+    {
+        $formSearch = $this->createForm(SearchType::class);
+        $formSearch->handleRequest($request);
+
+        if ($formSearch->isSubmitted() && $formSearch->isValid()) {
+            $search = $formSearch->getData();
+            $programs = $programRepository->findLikeName($search);
+
+            return $this->render('program/index.html.twig', [
+                'programs' => $programs,
+
+            ]);
+            
+        }
+    
+    return $this->renderForm('category/index.html.twig', [
+        'categories' => $categoryRepository->findAll(),
+        'formSearch' => $formSearch,
+        ]);
+    }
+
+
     #[IsGranted('ROLE_ADMIN')]
+    #[Route('/new', name: 'app_category_new')]
     public function new(Request $request, CategoryRepository $categoryRepository): Response
     {
-        // Create a new Category Object
         $category = new Category();
-        // Create the associated Form
+
         $form = $this->createForm(CategoryType::class, $category);
-        // Get data from HTTP request
         $form->handleRequest($request);
-        // Was the form submitted ?
+
         if ($form->isSubmitted() && $form->isValid()) {
-            // Deal with the submitted data
-            // For example : persiste & flush the entity
-            // And redirect to a route that display the result
             $categoryRepository->save($category, true);
 
-            // Redirect to categories list
+            $this->addFlash('success', 'La catégorie est ajoutée.');
+
             return $this->redirectToRoute('category_index');
         }
 
-        // Render the form (best practice)
         return $this->renderForm('category/new.html.twig', [
             'form' => $form,
         ]);
-
-        // Alternative
-        // return $this->render('category/new.html.twig', [
-        //   'form' => $form->createView(),
-        // ]);
     }
+    
 
-    #[Route('/{categoryName}', methods: ['GET'], name: 'show')]
-    public function show(string $categoryName, CategoryRepository $categoryRepository, ProgramRepository $programRepository): Response
+
+    #[Route('/show/{id}', name: 'app_category_show', methods: ['GET'])]
+    public function app_show(Category $category, CategoryRepository $categoryRepository): Response
     {
-        $category = $categoryRepository->findOneByName($categoryName);
-        if (!$category) {
-            throw $this->createNotFoundException(
-                'No category with the name : ' . $categoryName . ' found in categories list.'
-            );
-        }
-        $programs = $programRepository->findBy(['category' => $category->getId()], ['id' => 'DESC'], 3);
-        return $this->render('category/show.html.twig', [
-            'programs' => $programs,
+        return $this->render('category/app_show.html.twig', [
             'category' => $category,
         ]);
+    }
+
+
+
+
+    #[Route('/{categoryName}', requirements: ['categoryName' => '^[a-zA-Z\-_]+$'], methods: ['GET'], name: 'show')]
+    public function show(string $categoryName, ProgramRepository $programRepository, CategoryRepository $categoryRepository): Response
+    {
+        $category = $categoryRepository->findOneBy(['name' => $categoryName]);
+        $programs = $programRepository->findBy(['category' => $category], ['title' => 'ASC']);
+
+        if (!$programs)
+            throw $this->createNotFoundException('Aucun programme pour la catégorie.');
+        
+        return $this->render('category/show.html.twig', [
+            'programs' => $programs, 
+            'category' => $category, 
+        ]);
+    }
+    
+    
+    
+    #[IsGranted('ROLE_ADMIN')]
+    #[Route('/{id}/edit', name: 'app_category_edit', methods: ['GET', 'POST'])]
+    public function edit(Request $request, Category $category, CategoryRepository $categoryRepository): Response
+    {
+        $form = $this->createForm(CategoryType::class, $category);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $categoryRepository->save($category, true);
+            $this->addFlash('success', 'La catégorie est modifiée.');
+
+            return $this->redirectToRoute('category_app_category_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->renderForm('category/edit.html.twig', [
+            'category' => $category,
+            'form' => $form,
+        ]);
+    }
+
+    #[IsGranted('ROLE_ADMIN')]
+    #[Route('/{id}', name: 'app_category_delete', methods: ['POST'])]
+    public function delete(Request $request, Category $category, CategoryRepository $categoryRepository): Response
+    {
+        if ($this->isCsrfTokenValid('delete'.$category->getId(), $request->request->get('_token'))) {
+            $categoryRepository->remove($category, true);
+            $this->addFlash('danger', 'La catégorie est supprimée.');
+        }
+
+        return $this->redirectToRoute('category_app_category_index', [], Response::HTTP_SEE_OTHER);
     }
 }
